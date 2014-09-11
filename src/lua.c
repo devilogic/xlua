@@ -146,6 +146,7 @@ static int report (lua_State *L, int status) {
 
 
 /* the next function is called unprotected, so it must avoid errors */
+/* 形成最终的报告，并且弹栈 */
 static void finalreport (lua_State *L, int status) {
   if (status != LUA_OK) {
     const char *msg = (lua_type(L, -1) == LUA_TSTRING) ? lua_tostring(L, -1)
@@ -182,13 +183,13 @@ static int docall (lua_State *L, int narg, int nres) {
   return status;
 }
 
-
+/* 打印版本 */
 static void print_version (void) {
   luai_writestring(LUA_COPYRIGHT, strlen(LUA_COPYRIGHT));
   luai_writeline();
 }
 
-
+/* 获取参数 */
 static int getargs (lua_State *L, char **argv, int n) {
   int narg;
   int i;
@@ -206,21 +207,21 @@ static int getargs (lua_State *L, char **argv, int n) {
   return narg;
 }
 
-
+/* 执行脚本文件 */
 static int dofile (lua_State *L, const char *name) {
   int status = luaL_loadfile(L, name);
   if (status == LUA_OK) status = docall(L, 0, 0);
   return report(L, status);
 }
 
-
+/* 执行一行代码 */
 static int dostring (lua_State *L, const char *s, const char *name) {
   int status = luaL_loadbuffer(L, s, strlen(s), name);
   if (status == LUA_OK) status = docall(L, 0, 0);
   return report(L, status);
 }
 
-
+/* 加载库文件 */
 static int dolibrary (lua_State *L, const char *name) {
   int status;
   lua_getglobal(L, "require");
@@ -342,6 +343,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
 
 
 /* check that argument has no extra characters at the end */
+/* 检查在末尾没有扩展字符 */
 #define noextrachars(x)		{if ((x)[2] != '\0') return -1;}
 
 
@@ -353,7 +355,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
 
 #define num_has		4	/* number of 'has_*' */
 
-
+/* 分析参数 */
 static int collectargs (char **argv, int *args) {
   int i;
   for (i = 1; argv[i] != NULL; i++) {
@@ -391,14 +393,17 @@ static int collectargs (char **argv, int *args) {
   return 0;
 }
 
-
+/* 处理-e与-l选项 */
 static int runargs (lua_State *L, char **argv, int n) {
   int i;
+	/* 便利参数 */
   for (i = 1; i < n; i++) {
     lua_assert(argv[i][0] == '-');
     switch (argv[i][1]) {  /* option */
       case 'e': {
+				/* 取出参数 */
         const char *chunk = argv[i] + 2;
+				/* 有空格的参数 */
         if (*chunk == '\0') chunk = argv[++i];
         lua_assert(chunk != NULL);
         if (dostring(L, chunk, "=(command line)") != LUA_OK)
@@ -406,6 +411,7 @@ static int runargs (lua_State *L, char **argv, int n) {
         break;
       }
       case 'l': {
+				/* 取出文件名 */
         const char *filename = argv[i] + 2;
         if (*filename == '\0') filename = argv[++i];
         lua_assert(filename != NULL);
@@ -434,19 +440,23 @@ static int handle_luainit (lua_State *L) {
     return dostring(L, init, name);
 }
 
-
+/* 真实的main函数 */
 static int pmain (lua_State *L) {
+  /* 取得参数 */
   int argc = (int)lua_tointeger(L, 1);
   char **argv = (char **)lua_touserdata(L, 2);
   int script;
   int args[num_has];
   args[has_i] = args[has_v] = args[has_e] = args[has_E] = 0;
+  /* 程序名获取 */
   if (argv[0] && argv[0][0]) progname = argv[0];
+	/* 脚本名 */
   script = collectargs(argv, args);
   if (script < 0) {  /* invalid arg? */
     print_usage(argv[-script]);
     return 0;
   }
+	/* 打印版本 */
   if (args[has_v]) print_version();
   if (args[has_E]) {  /* option '-E'? */
     lua_pushboolean(L, 1);  /* signal for libraries to ignore env. vars. */
@@ -454,15 +464,18 @@ static int pmain (lua_State *L) {
   }
   /* open standard libraries */
   luaL_checkversion(L);
+	/* 停止垃圾自动回首机制 */
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
   lua_gc(L, LUA_GCRESTART, 0);
+	/* -e选项为0,lua初始化失败 */
   if (!args[has_E] && handle_luainit(L) != LUA_OK)
     return 0;  /* error running LUA_INIT */
   /* execute arguments -e and -l */
   if (!runargs(L, argv, (script > 0) ? script : argc)) return 0;
   /* execute main script (if there is one) */
   if (script && handle_script(L, argv, script) != LUA_OK) return 0;
+	/* 交互模式 */
   if (args[has_i])  /* -i option? */
     dotty(L);
   else if (script == 0 && !args[has_e] && !args[has_v]) {  /* no arguments? */
@@ -476,19 +489,23 @@ static int pmain (lua_State *L) {
   return 1;
 }
 
-
+/* 主方法 */
 int main (int argc, char **argv) {
   int status, result;
+  /* 创建状态 */
   lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
   }
   /* call 'pmain' in protected mode */
+  /* 压入函数的地址与参数 */
   lua_pushcfunction(L, &pmain);
   lua_pushinteger(L, argc);  /* 1st argument */
   lua_pushlightuserdata(L, argv); /* 2nd argument */
+  /* 执行pmain */
   status = lua_pcall(L, 2, 1, 0);
+  /* 获取结果 */
   result = lua_toboolean(L, -1);  /* get result */
   finalreport(L, status);
   lua_close(L);

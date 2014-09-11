@@ -85,7 +85,9 @@ void luaF_freeupval (lua_State *L, UpVal *uv) {
   luaM_free(L, uv);  /* free upvalue */
 }
 
-
+/* L 虚拟机状态
+ * level 栈索引
+ */
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
   global_State *g = G(L);

@@ -28,7 +28,7 @@
 #define LUA_ANSI
 #endif
 
-
+/* WIN配置 */
 #if !defined(LUA_ANSI) && defined(_WIN32) && !defined(_WIN32_WCE)
 #define LUA_WIN		/* enable goodies for regular Windows platforms */
 #endif
@@ -39,7 +39,7 @@
 #endif
 
 
-
+/* LINUX配置 */
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
@@ -49,6 +49,7 @@
 #define LUA_USE_LONGLONG	/* assume support for long long */
 #endif
 
+/* MACOSX配置 */
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
 #define LUA_USE_DLOPEN		/* does not need -ldl */
@@ -65,6 +66,7 @@
 @* Interfaces Extension (XSI).
 ** CHANGE it (define it) if your system is XSI compatible.
 */
+/* POSIX配置 */
 #if defined(LUA_USE_POSIX)
 #define LUA_USE_MKSTEMP
 #define LUA_USE_ISATTY
@@ -84,6 +86,7 @@
 ** hierarchy or if you want to install your libraries in
 ** non-conventional directories.
 */
+/* WIN32配置 */
 #if defined(_WIN32)	/* { */
 /*
 ** In Windows, any exclamation mark ('!') in the path is replaced by the
@@ -140,6 +143,7 @@
 ** the libraries, you may want to use the following definition (define
 ** LUA_BUILD_AS_DLL to get it).
 */
+/* 将LUA编译为一个DLL */
 #if defined(LUA_BUILD_AS_DLL)	/* { */
 
 #if defined(LUA_CORE) || defined(LUA_LIB)	/* { */
@@ -335,6 +339,7 @@
 ** good enough for your machine. Probably you do not need to change
 ** this.
 */
+/* lua根据系统位数的类型定义 */
 #if LUAI_BITSINT >= 32		/* { */
 #define LUA_INT32	int
 #define LUAI_UMEM	size_t
@@ -353,6 +358,7 @@
 ** its only purpose is to stop Lua to consume unlimited stack
 ** space (and to reserve some numbers for pseudo-indices).
 */
+/* 这里规定了LUA的最大栈大小 */
 #if LUAI_BITSINT >= 32
 #define LUAI_MAXSTACK		1000000
 #else
@@ -360,6 +366,7 @@
 #endif
 
 /* reserve some space for error handling */
+/* 为错误处理保留空间 */
 #define LUAI_FIRSTPSEUDOIDX	(-LUAI_MAXSTACK - 1000)
 
 

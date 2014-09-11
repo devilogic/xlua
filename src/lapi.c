@@ -35,17 +35,22 @@ const char lua_ident[] =
 
 
 /* value at a non-valid index */
+/* 空的对象值 */
 #define NONVALIDVALUE		cast(TValue *, luaO_nilobject)
 
 /* corresponding test */
+/* 对象有效测试 */
 #define isvalid(o)	((o) != luaO_nilobject)
 
 /* test for pseudo index */
+/* 伪索引 */
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)
 
 /* test for valid but not pseudo index */
+/* 是一个有效索引，非伪索引 */
 #define isstackindex(i, o)	(isvalid(o) && !ispseudo(i))
 
+/* 检查有效索引,只要是一个有效的就可以了 */
 #define api_checkvalidindex(L, o)  api_check(L, isvalid(o), "invalid index")
 
 #define api_checkstackindex(L, i, o)  \
@@ -124,9 +129,11 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
 }
 
 
+/* 设置新的发生异常的回调函数 */
 LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
   lua_CFunction old;
   lua_lock(L);
+  /* 返回新的异常函数 */
   old = G(L)->panic;
   G(L)->panic = panicf;
   lua_unlock(L);
@@ -345,7 +352,7 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *isnum) {
   }
 }
 
-
+/* lua转化整型 */
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *isnum) {
   TValue n;
   const TValue *o = index2addr(L, idx);
@@ -551,9 +558,10 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
   return ret;
 }
 
-
+/* 压入执行栈 */
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
+  /* n为栈的索引，如果是0则将函数压入栈顶 */
   if (n == 0) {
     setfvalue(L->top, fn);
   }
@@ -573,7 +581,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_unlock(L);
 }
 
-
+/* 压入布尔值 */
 LUA_API void lua_pushboolean (lua_State *L, int b) {
   lua_lock(L);
   setbvalue(L->top, (b != 0));  /* ensure that true is 1 */
@@ -969,16 +977,25 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
   return status;
 }
 
-
+/* 从数据流中读取数据
+ * L 虚拟机状态
+ * reader 读取函数指针
+ * data 数据流
+ * chuckname 名称
+ * mode 模式
+ */
 LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
                       const char *chunkname, const char *mode) {
   ZIO z;
   int status;
   lua_lock(L);
+	/* chunkname默认为 '?' */
   if (!chunkname) chunkname = "?";
+	/* 关联IO结构与缓冲结构 */
   luaZ_init(L, &z, reader, data);
   status = luaD_protectedparser(L, &z, chunkname, mode);
   if (status == LUA_OK) {  /* no errors? */
+		/* 执行成功 */
     LClosure *f = clLvalue(L->top - 1);  /* get newly created function */
     if (f->nupvalues == 1) {  /* does it have one upvalue? */
       /* get global table from registry */

@@ -21,6 +21,16 @@
 ** +1 avoids warnings of "comparison has constant result";
 ** cast to 'void' avoids warnings of "value unused".
 */
+
+/* 重新分配内存内层宏
+ * L 虚拟机状态
+ * b 缓存指针
+ * on 旧的大小的计数
+ * n 新的大小的计数
+ * e 单位大小
+ *
+ * 如果要分配的大小+1 大于 最大个数则失败，否则调用luaM_realloc_
+ */
 #define luaM_reallocv(L,b,on,n,e) \
   (cast(void, \
      (cast(size_t, (n)+1) > MAX_SIZET/(e)) ? (luaM_toobig(L), 0) : 0), \
@@ -41,6 +51,13 @@
           if ((nelems)+1 > (size)) \
             ((v)=cast(t *, luaM_growaux_(L,v,&(size),sizeof(t),limit,e)))
 
+/* 重新分配内存
+ * L 虚拟机状态 
+ * v 缓存指针
+ * oldn 旧的大小的计数
+ * n 新的大小的计数
+ * t 单位大小
+ */
 #define luaM_reallocvector(L, v,oldn,n,t) \
    ((v)=cast(t *, luaM_reallocv(L, v, oldn, n, sizeof(t))))
 

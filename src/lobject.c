@@ -229,7 +229,11 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   return svalue(L->top - 1);
 }
 
-
+/* 压入字符串
+ * L 虚拟机状态
+ * fmt 字符串格式
+ * ... 参数
+ */
 const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
   const char *msg;
   va_list argp;

@@ -662,13 +662,17 @@ LUALIB_API int luaL_loadfilex (lua_State *L, const char *filename,
   return status;
 }
 
-
+/* 一个读取缓存结构 */
 typedef struct LoadS {
-  const char *s;
-  size_t size;
+  const char *s;        /* 缓存指针 */
+  size_t size;          /* 缓存大小 */
 } LoadS;
 
-
+/* 读取数据流
+ * L lua虚拟机状态
+ * ud 数据流handle
+ * size 返回的读取长度
+ */
 static const char *getS (lua_State *L, void *ud, size_t *size) {
   LoadS *ls = (LoadS *)ud;
   (void)L;  /* not used */
@@ -678,7 +682,13 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
   return ls->s;
 }
 
-
+/* 读取缓存
+ * L lua虚拟机状态
+ * buff 缓存指针
+ * size 缓存大小
+ * name 缓存名称
+ * mode 模式
+ */
 LUALIB_API int luaL_loadbufferx (lua_State *L, const char *buff, size_t size,
                                  const char *name, const char *mode) {
   LoadS ls;

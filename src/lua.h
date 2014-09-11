@@ -15,7 +15,7 @@
 
 #include "luaconf.h"
 
-
+/* 当前版本 */
 #define LUA_VERSION_MAJOR	"5"
 #define LUA_VERSION_MINOR	"2"
 #define LUA_VERSION_NUM		502
@@ -28,6 +28,7 @@
 
 
 /* mark for precompiled code ('<esc>Lua') */
+/* 预编译代码的签名 */
 #define LUA_SIGNATURE	"\033Lua"
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
@@ -50,7 +51,7 @@
 #define LUA_ERRGCMM	5
 #define LUA_ERRERR	6
 
-
+/* lua状态 */
 typedef struct lua_State lua_State;
 
 typedef int (*lua_CFunction) (lua_State *L);
@@ -59,14 +60,16 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** functions that read/write blocks when loading/dumping Lua chunks
 */
+/* 读写函数原型 */
 typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
-
+/* 写入函数原型 */
 typedef int (*lua_Writer) (lua_State *L, const void* p, size_t sz, void* ud);
 
 
 /*
 ** prototype for memory-allocation functions
 */
+/* 内存分配函数原型 */
 typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
@@ -100,13 +103,16 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
 /* type of numbers in Lua */
+/* lua的数字类型 */
 typedef LUA_NUMBER lua_Number;
 
 
 /* type for integer functions */
+/* lua的整形 */
 typedef LUA_INTEGER lua_Integer;
 
 /* unsigned integer type */
+/* lua的无符号整形 */
 typedef LUA_UNSIGNED lua_Unsigned;
 
 
@@ -376,6 +382,7 @@ typedef struct lua_Debug lua_Debug;  /* activation record */
 
 
 /* Functions to be called by the debugger in specific events */
+/* HOOK函数原型 */
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
 

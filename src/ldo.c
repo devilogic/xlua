@@ -63,7 +63,13 @@
 
 #else
 /* default handling with long jumps */
+/* lua抛出异常 */
 #define LUAI_THROW(L,c)		longjmp((c)->b, 1)
+/* TRY结构
+ * L 虚拟机状态
+ * c lua_longjmp结构
+ * a 函数调用语句
+ */
 #define LUAI_TRY(L,c,a)		if (setjmp((c)->b) == 0) { a }
 #define luai_jmpbuf		jmp_buf
 
@@ -74,14 +80,21 @@
 
 
 /* chain list of long jump buffers */
+/* lua自定义长跳结构 */
 struct lua_longjmp {
-  struct lua_longjmp *previous;
-  luai_jmpbuf b;
+  struct lua_longjmp *previous;       /* 上一个longjmp结构指针 */
+  luai_jmpbuf b;     /* jmp_buf */
+	/* 错误代码 */
   volatile int status;  /* error code */
 };
 
-
+/* 设置错误对象
+ * L 虚拟机状态
+ * errcode 出错代码
+ * oldtop 旧的栈指针
+ */
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
+	/* 遍历错误代码 */
   switch (errcode) {
     case LUA_ERRMEM: {  /* memory error? */
       setsvalue2s(L, oldtop, G(L)->memerrmsg); /* reuse preregistered msg. */
@@ -96,6 +109,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
       break;
     }
   }
+	/* 增加栈顶高度 */
   L->top = oldtop + 1;
 }
 
@@ -121,16 +135,23 @@ l_noret luaD_throw (lua_State *L, int errcode) {
   }
 }
 
-
+/* 执行函数
+ * L 虚拟机状态
+ * f 要执行的函数
+ * ud 函数的参数
+ */
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   unsigned short oldnCcalls = L->nCcalls;
+	/* 设置一个longjmp结构，准备调入到新函数中执行 */
   struct lua_longjmp lj;
   lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
+	/* 执行函数 */
   LUAI_TRY(L, &lj,
     (*f)(L, ud);
   );
+	/* 恢复错误处理 */
   L->errorJmp = lj.previous;  /* restore old error handler */
   L->nCcalls = oldnCcalls;
   return lj.status;
@@ -138,7 +159,10 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 /* }====================================================== */
 
-
+/* 纠正栈
+ * L 虚拟机状态
+ * oldstack 旧的栈指针
+ */
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
   GCObject *up;
@@ -155,15 +179,21 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 
 
 /* some space for error handling */
+/* 一些分配给错误处理的空间 */
 #define ERRORSTACKSIZE	(LUAI_MAXSTACK + 200)
 
-
+/* 重新分配栈空间
+ * L 虚拟机状态
+ * newsize 新的栈大小
+ */
 void luaD_reallocstack (lua_State *L, int newsize) {
   TValue *oldstack = L->stack;
   int lim = L->stacksize;
   lua_assert(newsize <= LUAI_MAXSTACK || newsize == ERRORSTACKSIZE);
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK);
+	/* 重新分配空间 */
   luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue);
+	/* 增加的栈空间设置为nil */
   for (; lim < newsize; lim++)
     setnilvalue(L->stack + lim); /* erase new segment */
   L->stacksize = newsize;
@@ -190,26 +220,34 @@ void luaD_growstack (lua_State *L, int n) {
   }
 }
 
-
+/* 返回正在使用的栈的量 */
 static int stackinuse (lua_State *L) {
   CallInfo *ci;
   StkId lim = L->top;
+	/* 遍历栈调用函数 */
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
+		/* 判断栈顶小于 栈总共的末尾 */
     lua_assert(ci->top <= L->stack_last);
+		/* 一层一层的回栈，记录到最后一个调用的栈地址 */
     if (lim < ci->top) lim = ci->top;
   }
+	/* 最后统计使用中的栈数量 */
   return cast_int(lim - L->stack) + 1;  /* part of stack in use */
 }
 
-
+/* 收缩栈 */
 void luaD_shrinkstack (lua_State *L) {
-  int inuse = stackinuse(L);
+  int inuse = stackinuse(L);     /* 统计使用中的栈数量 */
+	/* 获取一个新值 */
   int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
+	/* 新的大小不能超过最大值 */
   if (goodsize > LUAI_MAXSTACK) goodsize = LUAI_MAXSTACK;
+	/* 正在使用的栈大于最大栈或者新分配的大小大于等于当前虚拟机的栈空间 */
   if (inuse > LUAI_MAXSTACK ||  /* handling stack overflow? */
       goodsize >= L->stacksize)  /* would grow instead of shrink? */
     condmovestack(L);  /* don't change stack (change only for debugging) */
   else
+		/* 重新分配栈 */
     luaD_reallocstack(L, goodsize);  /* shrink it */
 }
 
@@ -591,25 +629,40 @@ LUA_API int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k) {
   return 0;  /* return to 'luaD_hook' */
 }
 
-
+/* 函数调用接口
+ * L 虚拟机状态
+ * func 要调用的函数指针
+ * u 参数结构
+ * old_top 当前栈地址
+ * ef 错误处理函数在栈中的地址
+ */
 int luaD_pcall (lua_State *L, Pfunc func, void *u,
                 ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
-  CallInfo *old_ci = L->ci;
+	/* 以下从L中取出关于调用信息老的值并记录 */
+  CallInfo *old_ci = L->ci;      /* 返回当前函数调用结构指针并保存 */
   lu_byte old_allowhooks = L->allowhook;
   unsigned short old_nny = L->nny;
   ptrdiff_t old_errfunc = L->errfunc;
+	
+	/* 设置新的错误处理函数 */
   L->errfunc = ef;
+	/* 执行函数func */
   status = luaD_rawrunprotected(L, func, u);
+	/* 执行失败 */
   if (status != LUA_OK) {  /* an error occurred? */
+		/* 返回原先的栈指针 */
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
     seterrorobj(L, status, oldtop);
+		/* 恢复上一层的数值 */
     L->ci = old_ci;
     L->allowhook = old_allowhooks;
     L->nny = old_nny;
+		/* 收缩栈 */
     luaD_shrinkstack(L);
   }
+	/* 回复老的错误处理函数 */
   L->errfunc = old_errfunc;
   return status;
 }
@@ -619,35 +672,52 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 /*
 ** Execute a protected parser.
 */
+/* 执行一个被保护分析器结构 */
 struct SParser {  /* data to `f_parser' */
-  ZIO *z;
+  ZIO *z;        /* IO结构指针 */
+	/* 词法扫描所使用的动态结构 */
   Mbuffer buff;  /* dynamic structure used by the scanner */
+	/* 语法分析所使用的动态结构 */
   Dyndata dyd;  /* dynamic structures used by the parser */
-  const char *mode;
-  const char *name;
+  const char *mode;     /* 模式 */
+  const char *name;     /* 名称 */
 };
 
-
+/* 检查当前执行模式
+ * L 虚拟机字节码
+ * mode 执行模式
+ * x 寻找这个字符
+ */
 static void checkmode (lua_State *L, const char *mode, const char *x) {
+	/* mode存在并且没有找到x字符 */
   if (mode && strchr(mode, x[0]) == NULL) {
+		/* 压入字符串 */
     luaO_pushfstring(L,
        "attempt to load a %s chunk (mode is " LUA_QS ")", x, mode);
+		/* 抛出异常错误的语法 */
     luaD_throw(L, LUA_ERRSYNTAX);
   }
 }
 
-
+/* 语法分析
+ * L 虚拟机状态
+ * ud 参数
+ */
 static void f_parser (lua_State *L, void *ud) {
   int i;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
+	/* 读取一个字节 */
   int c = zgetc(p->z);  /* read first character */
+	/* 判断是编译好的字节码 还是 脚本文件 */
   if (c == LUA_SIGNATURE[0]) {
     checkmode(L, p->mode, "binary");
+		/* 关联分析器io结构与字节码缓存 */
     cl = luaU_undump(L, p->z, &p->buff, p->name);
   }
   else {
     checkmode(L, p->mode, "text");
+		/* 进行脚本语法分析 */
     cl = luaY_parser(L, p->z, &p->buff, &p->dyd, p->name, c);
   }
   lua_assert(cl->l.nupvalues == cl->l.p->sizeupvalues);
@@ -658,22 +728,33 @@ static void f_parser (lua_State *L, void *ud) {
   }
 }
 
-
+/* 
+ * L 虚拟机状态
+ * z IO结构指针
+ * name 缓冲名称
+ * mode 模式
+ */
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
                                         const char *mode) {
   struct SParser p;
   int status;
+	/* 在分析期间无法放弃 */
   L->nny++;  /* cannot yield during parsing */
   p.z = z; p.name = name; p.mode = mode;
+	/* 语法分析结构初始化 */
   p.dyd.actvar.arr = NULL; p.dyd.actvar.size = 0;
   p.dyd.gt.arr = NULL; p.dyd.gt.size = 0;
   p.dyd.label.arr = NULL; p.dyd.label.size = 0;
+	/* 词法分析缓存初始化 */
   luaZ_initbuffer(L, &p.buff);
+	/* 进行执行 */
   status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
+	/* 释放内存 */
   luaZ_freebuffer(L, &p.buff);
   luaM_freearray(L, p.dyd.actvar.arr, p.dyd.actvar.size);
   luaM_freearray(L, p.dyd.gt.arr, p.dyd.gt.size);
   luaM_freearray(L, p.dyd.label.arr, p.dyd.label.size);
+	/* 可放弃计数递减 */
   L->nny--;
   return status;
 }

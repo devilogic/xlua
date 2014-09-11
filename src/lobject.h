@@ -61,6 +61,7 @@
 #define BIT_ISCOLLECTABLE	(1 << 6)
 
 /* mark a tag as collectable */
+/* 标记一个对象的属性为可回收属性 */
 #define ctb(t)			((t) | BIT_ISCOLLECTABLE)
 
 
@@ -74,6 +75,7 @@ typedef union GCObject GCObject;
 ** Common Header for all collectable objects (in macro form, to be
 ** included in other objects)
 */
+/* 定义一组公共的属性为每个可回收的lua内部对象 */
 #define CommonHeader	GCObject *next; lu_byte tt; lu_byte marked
 
 
@@ -91,7 +93,7 @@ typedef struct GCheader {
 */
 typedef union Value Value;
 
-
+/* 数字区域 */
 #define numfield	lua_Number n;    /* numbers */
 
 
@@ -109,12 +111,13 @@ typedef struct lua_TValue TValue;
 /* macro defining a nil value */
 #define NILCONSTANT	{NULL}, LUA_TNIL
 
-
+/* 取对象的值相关 */
 #define val_(o)		((o)->value_)
 #define num_(o)		(val_(o).n)
 
 
 /* raw type tag of a TValue */
+/* 取出对象的标志值 */
 #define rttype(o)	((o)->tt_)
 
 /* tag with no variants (bits 0-3) */
@@ -151,6 +154,7 @@ typedef struct lua_TValue TValue;
 
 /* Macros to access values */
 #define nvalue(o)	check_exp(ttisnumber(o), num_(o))
+/* 测试对象是否可回收 */
 #define gcvalue(o)	check_exp(iscollectable(o), val_(o).gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), val_(o).p)
 #define rawtsvalue(o)	check_exp(ttisstring(o), &val_(o).gc->ts)
@@ -169,13 +173,21 @@ typedef struct lua_TValue TValue;
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
-
+/* 此对象是否可回收 */
 #define iscollectable(o)	(rttype(o) & BIT_ISCOLLECTABLE)
 
 
 /* Macros for internal tests */
 #define righttt(obj)		(ttype(obj) == gcvalue(obj)->gch.tt)
 
+/* 判断此对象当前是活动对象
+ * g 全局状态结构
+ * obj 对象指针
+ * 判断依据
+ * 不是可回收状态
+ * 对象属性不为空
+ * 非已死对象
+ */
 #define checkliveness(g,obj) \
 	lua_longassert(!iscollectable(obj) || \
 			(righttt(obj) && !isdead(g,gcvalue(obj))))
@@ -202,6 +214,11 @@ typedef struct lua_TValue TValue;
   { TValue *io=(obj); GCObject *i_g=(x); \
     val_(io).gc=i_g; settt_(io, ctb(gch(i_g)->tt)); }
 
+/* 设置给字符串对象设置值
+ * L 虚拟机状态
+ * obj lua对象指针
+ * x 要设置给lua对象的值
+ */
 #define setsvalue(L,obj,x) \
   { TValue *io=(obj); \
     TString *x_ = (x); \
@@ -384,21 +401,26 @@ typedef struct lua_TValue TValue;
 ** =======================================================
 */
 
-
+/* lua元素值 */
 union Value {
+	/* 可回收对象指针 */
   GCObject *gc;    /* collectable objects */
+	/* 用户定义的数据 */
   void *p;         /* light userdata */
+	/* bool值 */
   int b;           /* booleans */
+	/* C语言函数 */
   lua_CFunction f; /* light C functions */
+	/* 数字 */
   numfield         /* numbers */
 };
 
-
+/* lua元素结构体 */
 struct lua_TValue {
   TValuefields;
 };
 
-
+/* 指向一个栈元素 */
 typedef TValue *StkId;  /* index to stack elements */
 
 
@@ -407,12 +429,15 @@ typedef TValue *StkId;  /* index to stack elements */
 /*
 ** Header for string value; string bytes follow the end of this structure
 */
+/* lua内部字符串保存结构 */
 typedef union TString {
+	/* 字符串缓存最大对齐力度 */
   L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
     CommonHeader;
     lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
     unsigned int hash;
+		/* 当前字符串长度 */
     size_t len;  /* number of characters in string */
   } tsv;
 } TString;

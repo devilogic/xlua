@@ -58,6 +58,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 
 /* internal assertions for in-house debugging */
+/* 定义使用内部的的断言系统 */
 #if defined(lua_assert)
 #define check_exp(c,e)		(lua_assert(c), (e))
 /* to avoid problems with conditions too long */
@@ -84,12 +85,12 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 #define api_check(l,e,msg)	luai_apicheck(l,(e) && msg)
 
-
+/* 未使用标记 */
 #if !defined(UNUSED)
 #define UNUSED(x)	((void)(x))	/* to avoid warnings */
 #endif
 
-
+/* 强制转换 */
 #define cast(t, exp)	((t)(exp))
 
 #define cast_byte(i)	cast(lu_byte, (i))
@@ -135,22 +136,25 @@ typedef lu_int32 Instruction;
 
 
 /* maximum stack for a Lua function */
+/* 定义lua函数最大的栈大小 */
 #define MAXSTACK	250
 
 
 
 /* minimum size for the string table (must be power of 2) */
+/* 定义字符串最小缓存大小 */
 #if !defined(MINSTRTABSIZE)
 #define MINSTRTABSIZE	32
 #endif
 
 
 /* minimum size for string buffer */
+/* 最小的长度对于字符串缓存 */
 #if !defined(LUA_MINBUFFER)
 #define LUA_MINBUFFER	32
 #endif
 
-
+/* lua锁如果未定义，则取消两个宏的定义 */
 #if !defined(lua_lock)
 #define lua_lock(L)     ((void) 0)
 #define lua_unlock(L)   ((void) 0)
@@ -296,6 +300,7 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 #define condmovestack(L)	((void)0)
 #else
 /* realloc stack keeping its size */
+/* 重新分配栈空间 */
 #define condmovestack(L)	luaD_reallocstack((L), (L)->stacksize)
 #endif
 
