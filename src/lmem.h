@@ -42,9 +42,19 @@
 
 #define luaM_malloc(L,s)	luaM_realloc_(L, NULL, 0, (s))
 #define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))
+/*
+ * L 虚拟机状态
+ * n 要分配的的对象个数
+ * t 要分配的单位类型
+ */
 #define luaM_newvector(L,n,t) \
 		cast(t *, luaM_reallocv(L, NULL, 0, n, sizeof(t)))
 
+/* 分配一个新的内存空间给对象
+ * L 虚拟机状态
+ * tag 所分配对象的大小
+ * s 要分配内存的大小
+ */
 #define luaM_newobject(L,tag,s)	luaM_realloc_(L, NULL, tag, (s))
 
 #define luaM_growvector(L,v,nelems,size,t,limit,e) \

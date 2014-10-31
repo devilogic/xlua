@@ -10,7 +10,7 @@
 
 #include "lua.h"
 
-
+/* lua内部库的实现 */
 
 LUAMOD_API int (luaopen_base) (lua_State *L);
 

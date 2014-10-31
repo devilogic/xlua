@@ -24,7 +24,7 @@
 #include "lvm.h"
 
 
-
+/* 定义空值 */
 LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 
 
@@ -33,7 +33,9 @@ LUAI_DDEF const TValue luaO_nilobject_ = {NILCONSTANT};
 ** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
 ** eeeee != 0 and (xxx) otherwise.
 */
+/* 将一个整型转换为一个"浮点字节" */
 int luaO_int2fb (unsigned int x) {
+	/* e为指数部分 */
   int e = 0;  /* exponent */
   if (x < 8) return x;
   while (x >= 0x10) {
@@ -45,6 +47,7 @@ int luaO_int2fb (unsigned int x) {
 
 
 /* converts back */
+/* lua0_fb2int的逆运算 */
 int luaO_fb2int (int x) {
   int e = (x >> 3) & 0x1f;
   if (e == 0) return x;
@@ -53,6 +56,7 @@ int luaO_fb2int (int x) {
 
 
 int luaO_ceillog2 (unsigned int x) {
+	/* 1-256 以2为底的指数表*/
   static const lu_byte log_2[256] = {
     0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -69,27 +73,27 @@ int luaO_ceillog2 (unsigned int x) {
   return l + log_2[x];
 }
 
-
+/* 进行算数操作 */
 lua_Number luaO_arith (int op, lua_Number v1, lua_Number v2) {
   switch (op) {
-    case LUA_OPADD: return luai_numadd(NULL, v1, v2);
-    case LUA_OPSUB: return luai_numsub(NULL, v1, v2);
-    case LUA_OPMUL: return luai_nummul(NULL, v1, v2);
-    case LUA_OPDIV: return luai_numdiv(NULL, v1, v2);
-    case LUA_OPMOD: return luai_nummod(NULL, v1, v2);
-    case LUA_OPPOW: return luai_numpow(NULL, v1, v2);
-    case LUA_OPUNM: return luai_numunm(NULL, v1);
+    case LUA_OPADD: return luai_numadd(NULL, v1, v2);    /* 加 */
+    case LUA_OPSUB: return luai_numsub(NULL, v1, v2);    /* 减 */
+    case LUA_OPMUL: return luai_nummul(NULL, v1, v2);    /* 乘 */
+    case LUA_OPDIV: return luai_numdiv(NULL, v1, v2);    /* 除 */
+    case LUA_OPMOD: return luai_nummod(NULL, v1, v2);    /* 模 */
+    case LUA_OPPOW: return luai_numpow(NULL, v1, v2);    /* 平方 */
+    case LUA_OPUNM: return luai_numunm(NULL, v1);        
     default: lua_assert(0); return 0;
   }
 }
 
-
+/* 将asnii字符的16进制c转换乘对应的整型值 */
 int luaO_hexavalue (int c) {
   if (lisdigit(c)) return c - '0';
   else return ltolower(c) - 'a' + 10;
 }
 
-
+/* 这里定义 lua_strx2number函数,将字符串转换成整型 */
 #if !defined(lua_strx2number)
 
 #include <math.h>
@@ -115,6 +119,7 @@ static lua_Number readhexa (const char **s, lua_Number r, int *count) {
 ** convert an hexadecimal numeric string to a number, following
 ** C99 specification for 'strtod'
 */
+/* 字符串转数字 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
   lua_Number r = 0.0;
   int e = 0, i = 0;
@@ -154,11 +159,17 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 
 #endif
 
-
+/* 将字符串转成数字
+ * s 是字符串缓冲区
+ * len 字符串长度
+ * result 是转化成数字
+ */
 int luaO_str2d (const char *s, size_t len, lua_Number *result) {
   char *endptr;
+	/* 判断字符串是否是无限 'nN' */
   if (strpbrk(s, "nN"))  /* reject 'inf' and 'nan' */
     return 0;
+	/* 字符串是16进制 */
   else if (strpbrk(s, "xX"))  /* hexa? */
     *result = lua_strx2number(s, &endptr);
   else
@@ -169,20 +180,25 @@ int luaO_str2d (const char *s, size_t len, lua_Number *result) {
 }
 
 
-
+/* 对栈中压入字符串 */
 static void pushstr (lua_State *L, const char *str, size_t l) {
   setsvalue2s(L, L->top++, luaS_newlstr(L, str, l));
 }
 
 
 /* this function handles only `%d', `%c', %f, %p, and `%s' formats */
+/* 压入一个带有格式化类型字符串 */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 0;
+	/* 遍历整个字符串 */
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
+		/* 检查栈中是否可以存放 格式化字符串 + 项目 */
     luaD_checkstack(L, 2);  /* fmt + item */
+		/* 压入格式化字符串 */
     pushstr(L, fmt, e - fmt);
+		/* 跳过%号并判断类型 */
     switch (*(e+1)) {
       case 's': {
         const char *s = va_arg(argp, char *);
@@ -220,16 +236,20 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
             *(e + 1));
       }
     }
-    n += 2;
+    n += 2;   /* 每次增加前一个常量字符串 ＋ 变量字符串的个数 */
+		/* 跳过%x */
     fmt = e+2;
   }
+	/* 增大栈的大小 */
   luaD_checkstack(L, 1);
+	/* 压入剩余的字符串 */
   pushstr(L, fmt, strlen(fmt));
+	/* 链接栈中的字符串 */
   if (n > 0) luaV_concat(L, n + 1);
   return svalue(L->top - 1);
 }
 
-/* 压入字符串
+/* 压入格式化字符串外层函数
  * L 虚拟机状态
  * fmt 字符串格式
  * ... 参数
@@ -251,40 +271,53 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 #define PRE	"[string \""
 #define POS	"\"]"
 
+/* 复制b到a，l个字节，并且a增加l */
 #define addstr(a,b,l)	( memcpy(a,b,(l) * sizeof(char)), a += (l) )
-
+/* 按照不同的类型复制source到out
+ * bufflen是out的大小
+ */
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   size_t l = strlen(source);
+	/* 文本源 */
   if (*source == '=') {  /* 'literal' source */
+		/* 要复制的数据比缓存小则直接复制 */
     if (l <= bufflen)  /* small enough? */
       memcpy(out, source + 1, l * sizeof(char));
     else {  /* truncate it */
+			/* 仅复制bufflen-1个,阶段字符串 */
       addstr(out, source + 1, bufflen - 1);
       *out = '\0';
     }
   }
+	/* 文件名 */
   else if (*source == '@') {  /* file name */
     if (l <= bufflen)  /* small enough? */
       memcpy(out, source + 1, l * sizeof(char));
     else {  /* add '...' before rest of name */
+			/* 如果缓存不够大，则在之前添加 '...'字符 */
       addstr(out, RETS, LL(RETS));
       bufflen -= LL(RETS);
       memcpy(out, source + 1 + l - bufflen, bufflen * sizeof(char));
     }
   }
+	/* 字符串,按照\n添加 */
   else {  /* string; format as [string "source"] */
     const char *nl = strchr(source, '\n');  /* find first new line (if any) */
+		/* 添加[string \ 前缀 */
     addstr(out, PRE, LL(PRE));  /* add prefix */
     bufflen -= LL(PRE RETS POS) + 1;  /* save space for prefix+suffix+'\0' */
+		/* 小于缓存则直接添加 */
     if (l < bufflen && nl == NULL) {  /* small one-line source? */
       addstr(out, source, l);  /* keep it */
     }
     else {
+			/* 找到一行字符串的长度 */
       if (nl != NULL) l = nl - source;  /* stop at first newline */
       if (l > bufflen) l = bufflen;
       addstr(out, source, l);
       addstr(out, RETS, LL(RETS));
     }
+		/* 最后添加一个 ] 号 */
     memcpy(out, POS, (LL(POS) + 1) * sizeof(char));
   }
 }

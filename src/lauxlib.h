@@ -17,12 +17,13 @@
 
 
 /* extra error code for `luaL_load' */
+/* 额外的错误代码在 'luaL_load' 函数调用 */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
 
 
 typedef struct luaL_Reg {
-  const char *name;
-  lua_CFunction func;
+  const char *name;           /* 库名字符串 */
+  lua_CFunction func;         /* 打开库函数指针 */
 } luaL_Reg;
 
 

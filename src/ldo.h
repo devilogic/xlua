@@ -4,6 +4,8 @@
 ** See Copyright Notice in lua.h
 */
 
+/* ldo.h的作用应该是描述在栈中如何安全的调用函数 */
+
 #ifndef ldo_h
 #define ldo_h
 
@@ -12,7 +14,9 @@
 #include "lstate.h"
 #include "lzio.h"
 
-
+/* 栈的末尾 与 当前栈的距离是否小于等于 一个指定的数，则
+ * 自动增长这个栈的内存
+ */
 #define luaD_checkstack(L,n)	if (L->stack_last - L->top <= (n)) \
 				    luaD_growstack(L, n); else condmovestack(L);
 

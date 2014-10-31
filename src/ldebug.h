@@ -10,14 +10,17 @@
 
 #include "lstate.h"
 
-
+/* pc寄存器重定位 */
 #define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
 
+/* 获取函数的行信息 */
 #define getfuncline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
 
+/* 重新设置可HOOK的计数 */
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
 
 /* Active Lua function (given call info) */
+/* 活动的Lua函数 */
 #define ci_func(ci)		(clLvalue((ci)->func))
 
 

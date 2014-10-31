@@ -443,7 +443,7 @@ static const luaL_Reg base_funcs[] = {
   {NULL, NULL}
 };
 
-
+/* 打开基础库 */
 LUAMOD_API int luaopen_base (lua_State *L) {
   /* set global _G */
   lua_pushglobaltable(L);

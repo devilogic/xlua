@@ -92,10 +92,13 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 /* 强制转换 */
 #define cast(t, exp)	((t)(exp))
-
+/* 强制转换成byte类型 */
 #define cast_byte(i)	cast(lu_byte, (i))
+/* 强制转换成lua_Number */
 #define cast_num(i)	cast(lua_Number, (i))
+/* 强制转换成整型 */
 #define cast_int(i)	cast(int, (i))
+/* 强制转换成uchar类型 */
 #define cast_uchar(i)	cast(unsigned char, (i))
 
 
@@ -131,6 +134,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 ** type for virtual-machine instructions
 ** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
 */
+/* 一条指令4个字节 */
 typedef lu_int32 Instruction;
 
 
@@ -216,7 +220,7 @@ typedef lu_int32 Instruction;
 #elif defined(LUA_IEEE754TRICK)		/* }{ */
 /* the next trick should work on any machine using IEEE754 with
    a 32-bit int type */
-
+/* 专门为了类型转换提供的联合体 */
 union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
 
 #if !defined(LUA_IEEEENDIAN)	/* { */
@@ -233,6 +237,11 @@ union luai_Cast { double l_d; LUA_INT32 l_p[2]; };
     volatile union luai_Cast u; u.l_d = (n) + 6755399441055744.0; \
     (i) = (t)u.l_p[LUA_IEEEENDIANLOC]; }
 
+/* 哈希整型算法
+ * i 最后的哈希值
+ * n lua_Number类型的整型健
+ * n 首先加1，保证整数位不为0,然后分别增加高32位，低32位
+ */
 #define luai_hashnum(i,n)  \
   { volatile union luai_Cast u; u.l_d = (n) + 1.0;  /* avoid -0 */ \
     (i) = u.l_p[0]; (i) += u.l_p[1]; }  /* add double bits for his hash */

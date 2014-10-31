@@ -36,6 +36,7 @@
 /*
 ** Possible states of the Garbage Collector
 */
+/* 垃圾回收可能的状态 */
 #define GCSpropagate	0
 #define GCSatomic	1
 #define GCSsweepstring	2
@@ -116,6 +117,7 @@
 
 #define valiswhite(x)	(iscollectable(x) && iswhite(gcvalue(x)))
 
+/* 设置白名单状态 */
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 

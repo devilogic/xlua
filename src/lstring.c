@@ -47,7 +47,11 @@ int luaS_eqstr (TString *a, TString *b) {
          (a->tsv.tt == LUA_TSHRSTR ? eqshrstr(a, b) : luaS_eqlngstr(a, b));
 }
 
-
+/* 对字符串的哈希函数 
+ * str 要处理的字符串
+ * l 字符串的长度
+ * seed 哈希种子
+ */
 unsigned int luaS_hash (const char *str, size_t l, unsigned int seed) {
   unsigned int h = seed ^ cast(unsigned int, l);
   size_t l1;
@@ -130,6 +134,7 @@ static TString *newshrstr (lua_State *L, const char *str, size_t l,
 /*
 ** checks whether short string exists and reuses it or creates a new one
 */
+/* 分配短字符串 */
 static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   GCObject *o;
   global_State *g = G(L);
@@ -153,10 +158,12 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
 /*
 ** new string (with explicit length)
 */
+/* 生成一个新的字符串 */
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   if (l <= LUAI_MAXSHORTLEN)  /* short string? */
     return internshrstr(L, str, l);
   else {
+		/* 如果要分配的字符串长度大于最大长度 */
     if (l + 1 > (MAX_SIZET - sizeof(TString))/sizeof(char))
       luaM_toobig(L);
     return createstrobj(L, str, l, LUA_TLNGSTR, G(L)->seed, NULL);

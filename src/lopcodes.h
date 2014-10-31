@@ -28,7 +28,7 @@
   unsigned argument.
 ===========================================================================*/
 
-
+/* 基本指令格式 */
 enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 
@@ -44,11 +44,11 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define SIZE_OP		6
 
 #define POS_OP		0
-#define POS_A		(POS_OP + SIZE_OP)
-#define POS_C		(POS_A + SIZE_A)
-#define POS_B		(POS_C + SIZE_C)
-#define POS_Bx		POS_C
-#define POS_Ax		POS_A
+#define POS_A		(POS_OP + SIZE_OP)       /* 6 */
+#define POS_C		(POS_A + SIZE_A)         /* 14 */
+#define POS_B		(POS_C + SIZE_C)         /* 23 */
+#define POS_Bx		POS_C                  /* 14 */
+#define POS_Ax		POS_A                  /* 6 */
 
 
 /*
@@ -70,7 +70,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define MAXARG_Ax	MAX_INT
 #endif
 
-
+/* 寄存器的最大值 */
 #define MAXARG_A        ((1<<SIZE_A)-1)
 #define MAXARG_B        ((1<<SIZE_B)-1)
 #define MAXARG_C        ((1<<SIZE_C)-1)
@@ -85,7 +85,9 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 /*
 ** the following macros help to manipulate instructions
 */
+/* 以下都是一些关于操作虚拟机寄存器的宏 */
 
+/* 获取与设置操作码 */
 #define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
 		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
@@ -94,6 +96,7 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
                 ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
 
+/* 获取与设置寄存器 */
 #define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
 #define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
 
@@ -112,7 +115,12 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 #define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
-
+/* 创建指令
+ * o 操作码
+ * a 寄存器A
+ * b 寄存器B
+ * c 寄存器C
+ */
 #define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
@@ -129,19 +137,24 @@ enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 /*
 ** Macros to operate RK indices
 */
+/* 操作RK索引的宏 */
 
 /* this bit 1 means constant (0 means register) */
+/* 1是常量,0是寄存器 */
 #define BITRK		(1 << (SIZE_B - 1))
 
 /* test whether value is a constant */
+/* 是否是常量 */
 #define ISK(x)		((x) & BITRK)
 
 /* gets the index of the constant */
+/* 获取常量的的索引 */
 #define INDEXK(r)	((int)(r) & ~BITRK)
 
 #define MAXINDEXRK	(BITRK - 1)
 
 /* code a constant index as a RK value */
+/* 标记一个RK的常量索引 */
 #define RKASK(x)	((x) | BITRK)
 
 

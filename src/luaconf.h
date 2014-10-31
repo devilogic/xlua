@@ -223,6 +223,7 @@
 @@ luai_writestringerror defines how to print error messages.
 ** (A format string with one argument is enough for Lua...)
 */
+/* 打印字符串到错误输出 */
 #define luai_writestringerror(s,p) \
 	(fprintf(stderr, (s), (p)), fflush(stderr))
 
@@ -323,7 +324,7 @@
 #define LUAI_BITSINT	16
 #elif INT_MAX > 2147483640L	/* }{ */
 /* int has at least 32 bits */
-#define LUAI_BITSINT	32
+#define LUAI_BITSINT	32              /* 一个整型最小32位 */
 #else				/* }{ */
 #error "you must define LUA_BITSINT with number of bits in an integer"
 #endif				/* } */
@@ -406,6 +407,7 @@
 @@ lua_number2str converts a number to a string.
 @@ LUAI_MAXNUMBER2STR is maximum size of previous conversion.
 */
+/* 定义了整型转字符串的宏 */
 #define LUA_NUMBER_SCAN		"%lf"
 #define LUA_NUMBER_FMT		"%.14g"
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
@@ -426,8 +428,10 @@
 ** systems, you can leave 'lua_strx2number' undefined and Lua will
 ** provide its own implementation.
 */
+/* 10进制字符串转数字 */
 #define lua_str2number(s,p)	strtod((s), (p))
 
+/* 16进制字符串转数字 */
 #if defined(LUA_USE_STRTODHEX)
 #define lua_strx2number(s,p)	strtod((s), (p))
 #endif
@@ -445,16 +449,17 @@
 #endif
 
 /* these are quite standard operations */
+/* 一些标准的操作 */
 #if defined(LUA_CORE)
-#define luai_numadd(L,a,b)	((a)+(b))
-#define luai_numsub(L,a,b)	((a)-(b))
-#define luai_nummul(L,a,b)	((a)*(b))
-#define luai_numdiv(L,a,b)	((a)/(b))
-#define luai_numunm(L,a)	(-(a))
-#define luai_numeq(a,b)		((a)==(b))
-#define luai_numlt(L,a,b)	((a)<(b))
-#define luai_numle(L,a,b)	((a)<=(b))
-#define luai_numisnan(L,a)	(!luai_numeq((a), (a)))
+#define luai_numadd(L,a,b)	((a)+(b))                       /* 加 */
+#define luai_numsub(L,a,b)	((a)-(b))                       /* 减 */
+#define luai_nummul(L,a,b)	((a)*(b))                       /* 乘 */
+#define luai_numdiv(L,a,b)	((a)/(b))                       /* 除 */
+#define luai_numunm(L,a)	(-(a))                            /* 取相反 */
+#define luai_numeq(a,b)		((a)==(b))                        /* 相等 */
+#define luai_numlt(L,a,b)	((a)<(b))                         /* 小于 */
+#define luai_numle(L,a,b)	((a)<=(b))                        /* 小于等于 */
+#define luai_numisnan(L,a)	(!luai_numeq((a), (a)))         /* 是否无限 */
 #endif
 
 

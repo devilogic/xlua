@@ -49,6 +49,10 @@ void luaT_init (lua_State *L) {
 ** function to be used with macro "fasttm": optimized for absence of
 ** tag methods
 */
+/* events 哈希表
+ * event 元事件
+ * ename 元事件名称
+ */
 const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
   const TValue *tm = luaH_getstr(events, ename);
   lua_assert(event <= TM_EQ);
@@ -59,10 +63,12 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
   else return tm;
 }
 
-
+/* 从对象转换到tm */
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
+	/* 判断对象类型 */
   switch (ttypenv(o)) {
+		/* 哈希表 */
     case LUA_TTABLE:
       mt = hvalue(o)->metatable;
       break;
@@ -70,8 +76,10 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
       mt = uvalue(o)->metatable;
       break;
     default:
+			/* 如果非以上两种类型，直接从全局状态中取出基础类型对应的哈希表 */
       mt = G(L)->mt[ttypenv(o)];
   }
+	/* 如果mt为空返回nil对象，否则获取基础类型的字符串 */
   return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : luaO_nilobject);
 }
 

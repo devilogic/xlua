@@ -12,17 +12,17 @@
 #include "lobject.h"
 #include "ltm.h"
 
-
+/* 将对象转换成字符串对象 */
 #define tostring(L,o) (ttisstring(o) || (luaV_tostring(L, o)))
-
+/* 将对象转换成整型对象 */
 #define tonumber(o,n)	(ttisnumber(o) || (((o) = luaV_tonumber(o,n)) != NULL))
-
+/* 判断两个对象相等 */
 #define equalobj(L,o1,o2)  (ttisequal(o1, o2) && luaV_equalobj_(L, o1, o2))
-
 #define luaV_rawequalobj(o1,o2)		equalobj(NULL,o1,o2)
 
 
 /* not to called directly */
+/* 内部函数不要直接调用 */
 LUAI_FUNC int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2);
 
 

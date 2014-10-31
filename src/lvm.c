@@ -29,13 +29,19 @@
 
 
 /* limit for table tag-method chains (to avoid loops) */
+/* tag循环最大的计数 */
 #define MAXTAGLOOP	100
 
-
+/* 转化数字 
+ * obj 要设置的值
+ * n 要设置的对象
+ */
 const TValue *luaV_tonumber (const TValue *obj, TValue *n) {
   lua_Number num;
+	/* 如果obj是数字类型则直接返回 */
   if (ttisnumber(obj)) return obj;
   if (ttisstring(obj) && luaO_str2d(svalue(obj), tsvalue(obj)->len, &num)) {
+		/* 设置对象的值 */
     setnvalue(n, num);
     return n;
   }
@@ -43,32 +49,47 @@ const TValue *luaV_tonumber (const TValue *obj, TValue *n) {
     return NULL;
 }
 
-
+/* 转换成字符串对象
+ * L lua虚拟机状态
+ * obj 要转换的对象的栈索引
+ */
 int luaV_tostring (lua_State *L, StkId obj) {
+	/* 如果对象不是数字类型对象则失败 */
   if (!ttisnumber(obj))
     return 0;
   else {
     char s[LUAI_MAXNUMBER2STR];
-    lua_Number n = nvalue(obj);
+    lua_Number n = nvalue(obj);      /* 返回整型的值 */
     int l = lua_number2str(s, n);
     setsvalue2s(L, obj, luaS_newlstr(L, s, l));
     return 1;
   }
 }
 
-
+/* 内部栈跟踪
+ * L 虚拟机状态
+ */
 static void traceexec (lua_State *L) {
-  CallInfo *ci = L->ci;
-  lu_byte mask = L->hookmask;
+  CallInfo *ci = L->ci;                 /* 获取调用链表 */
+  lu_byte mask = L->hookmask;           /* hook掩码 */
+	/* 如果hook计数等于0,则重新获取hook的数量 */
   int counthook = ((mask & LUA_MASKCOUNT) && L->hookcount == 0);
+	/* 如果计数不为空，则重新设置 */
   if (counthook)
     resethookcount(L);  /* reset count */
+	
+	/* 最后一次调用hook函数 */
   if (ci->callstatus & CIST_HOOKYIELD) {  /* called hook last time? */
+		/* 取消hook调用掩码 */
     ci->callstatus &= ~CIST_HOOKYIELD;  /* erase mark */
     return;  /* do not call hook again (VM yielded, so it did not move) */
   }
+	
+	/* 如果hook计数不为空,则调用hook函数 */
   if (counthook)
     luaD_hook(L, LUA_HOOKCOUNT, -1);  /* call count hook */
+	
+	/* 行hook */
   if (mask & LUA_MASKLINE) {
     Proto *p = ci_func(ci)->p;
     int npc = pcRel(ci->u.l.savedpc, p);
@@ -78,7 +99,10 @@ static void traceexec (lua_State *L) {
         newline != getfuncline(p, pcRel(L->oldpc, p)))  /* enter a new line */
       luaD_hook(L, LUA_HOOKLINE, newline);  /* call line hook */
   }
+	/* 保存要返回的pc寄存器的值 */
   L->oldpc = ci->u.l.savedpc;
+	
+	/* 如果虚拟机的状态是挂起 */
   if (L->status == LUA_YIELD) {  /* did hook yield? */
     if (counthook)
       L->hookcount = 1;  /* undo decrement to zero */
@@ -89,40 +113,66 @@ static void traceexec (lua_State *L) {
   }
 }
 
-
+/* 调用元操作
+ * L 虚拟机状态
+ * f 函数地址
+ * p1 函数第一个参数
+ * p2 函数第二个参数
+ * p3 函数的第三个参数
+ * hasres 是否存在第三个参数
+ */
 static void callTM (lua_State *L, const TValue *f, const TValue *p1,
                     const TValue *p2, TValue *p3, int hasres) {
-  ptrdiff_t result = savestack(L, p3);
-  setobj2s(L, L->top++, f);  /* push function */
-  setobj2s(L, L->top++, p1);  /* 1st argument */
-  setobj2s(L, L->top++, p2);  /* 2nd argument */
+  ptrdiff_t result = savestack(L, p3);                    /* 保存栈 */
+  setobj2s(L, L->top++, f);  /* push function */          /* 元函数地址 */
+  setobj2s(L, L->top++, p1);  /* 1st argument */          /* 参数1 */
+  setobj2s(L, L->top++, p2);  /* 2nd argument */          /* 参数2 */
+	/* 如果hasres是1则压入第三个参数 */
   if (!hasres)  /* no result? 'p3' is third argument */
     setobj2s(L, L->top++, p3);  /* 3rd argument */
   /* metamethod may yield only when called from Lua code */
+	/* 当从lua代码中调用元方法也许被挂起 */
   luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
+	/* 
+	 * 如果有第三个参数
+	 */
   if (hasres) {  /* if has result, move it to its place */
     p3 = restorestack(L, result);
     setobjs2s(L, p3, --L->top);
   }
 }
 
-
+/*
+ * 获取哈希表
+ * L 虚拟机状态
+ * t 哈希表的指针
+ * key 哈希表的键
+ * val 哈希表的值在栈中的索引
+ */
 void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;
+	/* 遍历 */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;
+		/* 如果t是哈希表类型 */
     if (ttistable(t)) {  /* `t' is a table? */
-      Table *h = hvalue(t);
+      Table *h = hvalue(t);        /* 获取哈希表值 */
+			/* 从键中取出值 */
       const TValue *res = luaH_get(h, key); /* do a primitive get */
+			/* 如果不是空值或者其表的元运算为空 */
       if (!ttisnil(res) ||  /* result is not nil? */
           (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) { /* or no TM? */
+				/* 设置哈希值到指定的栈索引位置 */
         setobj2s(L, val, res);
         return;
       }
       /* else will try the tag method */
     }
+		/* 如果t不是哈希表则判断其元运算是否为空值 */
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
       luaG_typeerror(L, t, "index");
+		
+		/* 如果元运算是函数则进行调用 */
     if (ttisfunction(tm)) {
       callTM(L, tm, t, key, val, 1);
       return;
@@ -132,7 +182,12 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   luaG_runerror(L, "loop in gettable");
 }
 
-
+/* 设置表
+ * L 虚拟机状态指针
+ * t 要设置的表指针
+ * key 要设置的表键
+ * val 要设置对应键的值
+ */
 void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
@@ -171,18 +226,32 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   luaG_runerror(L, "loop in settable");
 }
 
-
+/* 
+ * L 虚拟机状态
+ * p1 第一个操作数
+ * p2 第二个操作数
+ * res
+ * event 操作事件
+ */
 static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
                        StkId res, TMS event) {
+	/* 尝试将第一个操作数对象转换为tm类型 */
   const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (ttisnil(tm))
+		/* 如果是nil值,则从操作数2中获取 */
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
+	/* 还是nil则失败 */
   if (ttisnil(tm)) return 0;
   callTM(L, tm, p1, p2, res, 1);
   return 1;
 }
 
-
+/* 判断两个哈希表的元方法是否相等,相等则返回mt1的元方法
+ * L 虚拟机状态
+ * mt1 哈希表1
+ * mt2 哈希表2
+ * event 元操作
+ */
 static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
                                   TMS event) {
   const TValue *tm1 = fasttm(L, mt1, event);
@@ -196,7 +265,12 @@ static const TValue *get_equalTM (lua_State *L, Table *mt1, Table *mt2,
   return NULL;
 }
 
-
+/* 调用元方法
+ * L 虚拟机状态
+ * p1 值1
+ * p2 值2
+ * event 元方法
+ */
 static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
                          TMS event) {
   if (!call_binTM(L, p1, p2, L->top, event))
@@ -205,7 +279,9 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
     return !l_isfalse(L->top);
 }
 
-
+/* TString字符串的比较是否相等
+ * getstr - 从TString中获取真正的字符串缓冲区
+ */
 static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
@@ -227,25 +303,35 @@ static int l_strcmp (const TString *ls, const TString *rs) {
   }
 }
 
-
+/* 对象值比较 小于 
+ * L 虚拟机状态
+ * l 左值指针
+ * r 右值指针
+ */
 int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttisnumber(l) && ttisnumber(r))
     return luai_numlt(L, nvalue(l), nvalue(r));
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
+	/* 如果以上非数字或者非字符串 */
   else if ((res = call_orderTM(L, l, r, TM_LT)) < 0)
     luaG_ordererror(L, l, r);
   return res;
 }
 
-
+/* 对象值比较 小于等于 
+ * L 虚拟机状态
+ * l 左值指针
+ * r 右值指针
+ */
 int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttisnumber(l) && ttisnumber(r))
     return luai_numle(L, nvalue(l), nvalue(r));
   else if (ttisstring(l) && ttisstring(r))
     return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
+	/* 调用元方法 */
   else if ((res = call_orderTM(L, l, r, TM_LE)) >= 0)  /* first try `le' */
     return res;
   else if ((res = call_orderTM(L, r, l, TM_LT)) < 0)  /* else try `lt' */
@@ -257,9 +343,11 @@ int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
 /*
 ** equality of Lua values. L == NULL means raw equality (no metamethods)
 */
+/* 判断两个对象是否相等 */
 int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
   const TValue *tm;
-  lua_assert(ttisequal(t1, t2));
+  lua_assert(ttisequal(t1, t2));      /* 断言类型必须相同 */
+	/* 判断对象类型，分类型进行匹配 */
   switch (ttype(t1)) {
     case LUA_TNIL: return 1;
     case LUA_TNUMBER: return luai_numeq(nvalue(t1), nvalue(t2));
@@ -289,12 +377,16 @@ int luaV_equalobj_ (lua_State *L, const TValue *t1, const TValue *t2) {
   return !l_isfalse(L->top);
 }
 
-
+/* 从栈中链接数据
+ * total 表示了 数据在栈中的数量
+ */
 void luaV_concat (lua_State *L, int total) {
-  lua_assert(total >= 2);
+  lua_assert(total >= 2);    /* 至少两个才可以进行链接 */
   do {
     StkId top = L->top;
+		/* 元素数量至少是2 */
     int n = 2;  /* number of elements handled in this pass (at least 2) */
+		/* 第一个操作数不是字符串 或者 第一个操作数不是数字 或者第二个操作数不能转换成字符串 */
     if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
@@ -480,14 +572,16 @@ void luaV_finishOp (lua_State *L) {
 /*
 ** some macros for common tasks in `luaV_execute'
 */
+/*  一些关于 'luaV_execute'函数的宏 */
 
 #if !defined luai_runtimecheck
 #define luai_runtimecheck(L, c)		/* void */
 #endif
 
-
+/* 获取寄存器A */
 #define RA(i)	(base+GETARG_A(i))
 /* to be used after possible stack reallocation */
+/* 在栈重新后使用 */
 #define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
 #define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
@@ -497,26 +591,32 @@ void luaV_finishOp (lua_State *L) {
 #define KBx(i)  \
   (k + (GETARG_Bx(i) != 0 ? GETARG_Bx(i) - 1 : GETARG_Ax(*ci->u.l.savedpc++)))
 
-
 /* execute a jump instruction */
+/* 执行一个跳转指令 
+ * 1.从寄存器A中获取值
+ * 2.如果值A大于0 则 调用 luaF_close 关闭函数
+ * 3.从sBx中取出值,然后设定pc寄存器的值,e是修正值
+ */
 #define dojump(ci,i,e) \
   { int a = GETARG_A(i); \
     if (a > 0) luaF_close(L, ci->u.l.base + a - 1); \
     ci->u.l.savedpc += GETARG_sBx(i) + e; }
 
 /* for test instructions, execute the jump instruction that follows it */
+/* 进行跳转 */
 #define donextjump(ci)	{ i = *ci->u.l.savedpc; dojump(ci, i, 1); }
 
-
+/* 保护执行代码片段x */
 #define Protect(x)	{ {x;}; base = ci->u.l.base; }
 
+/* 检查垃圾回收 */
 #define checkGC(L,c)  \
   Protect( luaC_condGC(L,{L->top = (c);  /* limit of live values */ \
                           luaC_step(L); \
                           L->top = ci->top;})  /* restore top */ \
            luai_threadyield(L); )
 
-
+/* 算术操作 */
 #define arith_op(op,tm) { \
         TValue *rb = RKB(i); \
         TValue *rc = RKC(i); \
@@ -526,22 +626,24 @@ void luaV_finishOp (lua_State *L) {
         } \
         else { Protect(luaV_arith(L, ra, rb, rc, tm)); } }
 
-
+/* VM派遣 */
 #define vmdispatch(o)	switch(o)
 #define vmcase(l,b)	case l: {b}  break;
 #define vmcasenb(l,b)	case l: {b}		/* nb = no break */
 
+/* 虚拟机主执行函数 */
 void luaV_execute (lua_State *L) {
-  CallInfo *ci = L->ci;
+  CallInfo *ci = L->ci;       /* 取出当前调用函数 */
   LClosure *cl;
   TValue *k;
   StkId base;
  newframe:  /* reentry point when frame changes (call/return) */
   lua_assert(ci == L->ci);
-  cl = clLvalue(ci->func);
+  cl = clLvalue(ci->func);    /* 取出当前要执行的函数 */
   k = cl->p->k;
-  base = ci->u.l.base;
+  base = ci->u.l.base;        /* lua函数的栈索引 */
   /* main loop of interpreter */
+	/* 指令主循环 */
   for (;;) {
     Instruction i = *(ci->u.l.savedpc++);
     StkId ra;

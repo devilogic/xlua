@@ -125,13 +125,13 @@ static void print_usage (const char *badoption) {
   progname);
 }
 
-
+/* 打印消息msg到stderr */
 static void l_message (const char *pname, const char *msg) {
   if (pname) luai_writestringerror("%s: ", pname);
   luai_writestringerror("%s\n", msg);
 }
 
-
+/* 输出虚拟机L的报告 */
 static int report (lua_State *L, int status) {
   if (status != LUA_OK && !lua_isnil(L, -1)) {
     const char *msg = lua_tostring(L, -1);

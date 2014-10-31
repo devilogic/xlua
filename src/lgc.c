@@ -209,16 +209,24 @@ void luaC_checkupvalcolor (global_State *g, UpVal *uv) {
 ** it to '*list'. 'offset' tells how many bytes to allocate before the
 ** object itself (used only by states).
 */
+/* 创建一个可回收对象
+ * L 虚拟机状态指针
+ * tt 所创建对象的类型
+ * sz 所创建对象的的大小
+ * **list 可回收对象链表指针，如果list为空则从虚拟机中获取可回收对象
+ * offset 偏移的作用是,有多少其余内存在分配这的对象之前,见源代码可清晰清楚含义
+ */
 GCObject *luaC_newobj (lua_State *L, int tt, size_t sz, GCObject **list,
                        int offset) {
-  global_State *g = G(L);
-  char *raw = cast(char *, luaM_newobject(L, novariant(tt), sz));
-  GCObject *o = obj2gco(raw + offset);
+  global_State *g = G(L);   /* 获取主状态 */
+	/* novariant(tt)获取数据类型 */
+  char *raw = cast(char *, luaM_newobject(L, novariant(tt), sz));    /* raw = 分配的内存 */
+  GCObject *o = obj2gco(raw + offset);        /* 将Lua对象转化成可回收对象 */
   if (list == NULL)
     list = &g->allgc;  /* standard list for collectable objects */
-  gch(o)->marked = luaC_white(g);
-  gch(o)->tt = tt;
-  gch(o)->next = *list;
+  gch(o)->marked = luaC_white(g);       /* 设置标记属性 */
+  gch(o)->tt = tt;                      /* 设置对象属性 */
+  gch(o)->next = *list;                 /* 设置链表 */
   *list = o;
   return o;
 }

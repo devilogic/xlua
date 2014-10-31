@@ -43,13 +43,14 @@
 
 
 /* thread status */
+/* 线程状态 */
 #define LUA_OK		0
 #define LUA_YIELD	1
 #define LUA_ERRRUN	2
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
 #define LUA_ERRGCMM	5
-#define LUA_ERRERR	6
+#define LUA_ERRERR	6         /* 错误 */
 
 /* lua状态 */
 typedef struct lua_State lua_State;
@@ -76,23 +77,25 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 /*
 ** basic types
 */
-#define LUA_TNONE		(-1)
+/* 基础类型 */
+#define LUA_TNONE		(-1)                 /* 无任何类型 */
 
-#define LUA_TNIL		0
-#define LUA_TBOOLEAN		1
-#define LUA_TLIGHTUSERDATA	2
-#define LUA_TNUMBER		3
-#define LUA_TSTRING		4
-#define LUA_TTABLE		5
-#define LUA_TFUNCTION		6
-#define LUA_TUSERDATA		7
-#define LUA_TTHREAD		8
+#define LUA_TNIL		0                    /* 空类型 */
+#define LUA_TBOOLEAN		1                /* 布尔类型 */
+#define LUA_TLIGHTUSERDATA	2            /* 轻型用户自定义数据 */
+#define LUA_TNUMBER		3                  /* 数字型 */
+#define LUA_TSTRING		4                  /* 字符串型 */
+#define LUA_TTABLE		5                  /* 哈希表类型 */
+#define LUA_TFUNCTION		6                /* 函数类型 */
+#define LUA_TUSERDATA		7                /* 用户自定义数据类型 */
+#define LUA_TTHREAD		8                  /* 线程类型 */
 
 #define LUA_NUMTAGS		9
 
 
 
 /* minimum Lua stack available to a C function */
+/* 最小的lua栈大小 */
 #define LUA_MINSTACK	20
 
 
@@ -186,7 +189,7 @@ LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 /*
 ** Comparison and arithmetic functions
 */
-
+/* 数学运算 */
 #define LUA_OPADD	0	/* ORDER TM */
 #define LUA_OPSUB	1
 #define LUA_OPMUL	2
@@ -194,7 +197,7 @@ LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 #define LUA_OPMOD	4
 #define LUA_OPPOW	5
 #define LUA_OPUNM	6
-
+/* 数学运算函数原型 */
 LUA_API void  (lua_arith) (lua_State *L, int op);
 
 #define LUA_OPEQ	0
@@ -363,16 +366,18 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 /*
 ** Event codes
 */
-#define LUA_HOOKCALL	0
-#define LUA_HOOKRET	1
-#define LUA_HOOKLINE	2
-#define LUA_HOOKCOUNT	3
-#define LUA_HOOKTAILCALL 4
+/* hook调用类型 */
+#define LUA_HOOKCALL	0                  /* HOOK调用 */
+#define LUA_HOOKRET	1                    /* HOOK调用返回 */
+#define LUA_HOOKLINE	2                  /* HOOK行 */
+#define LUA_HOOKCOUNT	3                  /* HOOK计数 */
+#define LUA_HOOKTAILCALL 4               /* HOOK尾递归调用 */
 
 
 /*
 ** Event masks
 */
+/* 掩码 */
 #define LUA_MASKCALL	(1 << LUA_HOOKCALL)
 #define LUA_MASKRET	(1 << LUA_HOOKRET)
 #define LUA_MASKLINE	(1 << LUA_HOOKLINE)

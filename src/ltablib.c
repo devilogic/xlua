@@ -19,7 +19,6 @@
 #define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), luaL_len(L, n))
 
 
-
 #if defined(LUA_COMPAT_MAXN)
 static int maxn (lua_State *L) {
   lua_Number max = 0;

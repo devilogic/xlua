@@ -12,6 +12,10 @@
 ** it to suit your needs.
 */
 
+/* 如果你要嵌入lua到你的程序中并且需要打开一个标准库，需要在你的程序中调用
+ * luaL_openlibs。
+ */
+
 
 #define linit_c
 #define LUA_LIB
@@ -26,6 +30,7 @@
 ** these libs are loaded by lua.c and are readily available to any Lua
 ** program
 */
+/* 这些库被在lua.c文件中加载并且读取有效的库到任意lua程序中 */
 static const luaL_Reg loadedlibs[] = {
   {"_G", luaopen_base},
   {LUA_LOADLIBNAME, luaopen_package},

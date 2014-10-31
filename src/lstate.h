@@ -38,7 +38,7 @@
 
 */
 
-
+/* jmp状态在ldo.c中定义 */
 struct lua_longjmp;  /* defined in ldo.c */
 
 
@@ -47,18 +47,20 @@ struct lua_longjmp;  /* defined in ldo.c */
 /* 扩展栈数量 */
 #define EXTRA_STACK   5
 
-
+/* 基础栈大小,2倍的最小栈大小 */
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
 
 /* kinds of Garbage Collection */
+/* 垃圾回收的类型 */
 #define KGC_NORMAL	0
 #define KGC_EMERGENCY	1	/* gc was forced by an allocation failure */
 #define KGC_GEN		2	/* generational collection */
 
-
+/* 字符串表 */
 typedef struct stringtable {
   GCObject **hash;
+	/* 元素的个数 */
   lu_int32 nuse;  /* number of elements */
   int size;
 } stringtable;
@@ -92,9 +94,13 @@ typedef struct CallInfo {
 		/* C函数 */
     struct {  /* only for C functions */
       int ctx;  /* context info. in case of yields */
+			/* 函数指针 */
       lua_CFunction k;  /* continuation in case of yields */
+			/* 旧的错误处理函数指针 */
       ptrdiff_t old_errfunc;
+			/* 旧的允许hook标记 */
       lu_byte old_allowhook;
+			/* 状态 */
       lu_byte status;
     } c;
   } u;
@@ -104,17 +110,26 @@ typedef struct CallInfo {
 /*
 ** Bits in CallInfo status
 */
-#define CIST_LUA	(1<<0)	/* call is running a Lua function */
+/* 调用信息状态 */
+/* 正在运行一个lua函数 */
+#define CIST_LUA (1<<0)	/* call is running a Lua function */
+/* 正在运行一个调试HOOK函数 */
 #define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
+/* 重新进入上一个函数调用 */
 #define CIST_REENTRY	(1<<2)	/* call is running on same invocation of
                                    luaV_execute of previous call */
+/* 在挂起后重新进入 */
 #define CIST_YIELDED	(1<<3)	/* call reentered after suspension */
+/* 调用一个可继续的调用 */
 #define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
+/* 错误状态调用 */
 #define CIST_STAT	(1<<5)	/* call has an error status (pcall) */
+/* 尾递归 */
 #define CIST_TAIL	(1<<6)	/* call was tail called */
+/* 最后的hook调用可继续 */
 #define CIST_HOOKYIELD	(1<<7)	/* last hook called yielded */
 
-
+/* 当前是lua函数 */
 #define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
 
@@ -127,20 +142,28 @@ typedef struct global_State {
   lua_Alloc frealloc;  /* function to reallocate memory */
 	/* 虚拟机内存句柄 */
   void *ud;         /* auxiliary data to `frealloc' */
+	/* 总给分配的内存数量 */
   lu_mem totalbytes;  /* number of bytes currently allocated - GCdebt */
 	/* 已经分配的内存大小 */
   l_mem GCdebt;  /* bytes allocated not yet compensated by the collector */
   lu_mem GCmemtrav;  /* memory traversed by the GC */
   lu_mem GCestimate;  /* an estimate of the non-garbage memory in use */
+	/* 哈希字符串表 */
   stringtable strt;  /* hash table for strings */
   TValue l_registry;
+	/* 哈希算法随机种子 */
   unsigned int seed;  /* randomized seed for hashes */
   lu_byte currentwhite;
+	/* 垃圾回收状态 */
   lu_byte gcstate;  /* state of garbage collector */
+	/* 垃圾回收类型 */
   lu_byte gckind;  /* kind of GC running */
+	/* 如果是true,表明垃圾回收正在运行 */
   lu_byte gcrunning;  /* true if GC is running */
   int sweepstrgc;  /* position of sweep in `strt' */
+	/* 列出所有可回收对象 */
   GCObject *allgc;  /* list of all collectable objects */
+	/* 列出所有可终结的可回收对象 */
   GCObject *finobj;  /* list of collectable objects with finalizers */
   GCObject **sweepgc;  /* current position of sweep in list 'allgc' */
   GCObject **sweepfin;  /* current position of sweep in list 'finobj' */
@@ -156,11 +179,16 @@ typedef struct global_State {
   int gcmajorinc;  /* pause between major collections (only in gen. mode) */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
+	/* 虚拟机主线程 */
   struct lua_State *mainthread;
   const lua_Number *version;  /* pointer to version number */
 	/* 内存错误字符串描述 */
   TString *memerrmsg;  /* memory-error message */
+	/* TM运算的名称 */
   TString *tmname[TM_N];  /* array with tag-method names */
+	/* 每个基础类型都对应一个哈希表
+	 * 这个字段就是类型哈希表
+	 */
   struct Table *mt[LUA_NUMTAGS];  /* metatables for basic types */
 } global_State;
 
@@ -221,12 +249,13 @@ union GCObject {
 	/* 可回收对象公共头 */
   GCheader gch;  /* common header */
 	/* 不同的可回收对象 */
-  union TString ts;
-  union Udata u;
-  union Closure cl;
-  struct Table h;
-  struct Proto p;
-  struct UpVal uv;
+  union TString ts;        /* 字符串 */
+  union Udata u;           /* 用户定义 */
+  union Closure cl;        /* 闭包函数 */
+  struct Table h;          /* 哈希表 */
+  struct Proto p;          /* lua函数 */
+  struct UpVal uv;         /* upval值 */
+	/* 线程状态 */
   struct lua_State th;  /* thread */
 };
 
@@ -234,6 +263,7 @@ union GCObject {
 #define gch(o)		(&(o)->gch)
 
 /* macros to convert a GCObject into a specific value */
+/* 转换一个可回收对象到一个指定的值 */
 #define rawgco2ts(o)  \
 	check_exp(novariant((o)->gch.tt) == LUA_TSTRING, &((o)->ts))
 #define gco2ts(o)	(&rawgco2ts(o)->tsv)
@@ -249,10 +279,12 @@ union GCObject {
 #define gco2th(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
 
 /* macro to convert any Lua object into a GCObject */
+/* 将一个Lua对象转化成可回收对象 */
 #define obj2gco(v)	(cast(GCObject *, (v)))
 
 
 /* actual number of total bytes allocated */
+/* 当前真实的总共分配字节数 */
 #define gettotalbytes(g)	((g)->totalbytes + (g)->GCdebt)
 
 LUAI_FUNC void luaE_setdebt (global_State *g, l_mem debt);
